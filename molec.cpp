@@ -15,5 +15,9 @@ int main() {
 		       make_point(10, 10), make_point(1, 5),
 		       make_point(15, 10), make_point(10, 15)};
   LennardJonesSystem box(10, centers, 1.0, 1.0, 1.0, 100, 0.2, 0.001, 30);
+
+  //cout << box.get_nparticles() << endl;
+
+  box.step();
   return 0;
 }

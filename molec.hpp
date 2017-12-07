@@ -7,6 +7,9 @@
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
+#include <iostream>
+
+using namespace std;
 
 // Constants
 #define KBOLTZMANN (8.6 * 1e-5)
@@ -28,7 +31,7 @@ public:
   Langevin();
   Langevin(float T, float alpha, float h, Point *p);
   ~Langevin();
-  void param_change();
+  void param_change(float T, float alpha, float h);
   twofloat update(twofloat acceleration);
 private:
   Point *p;
@@ -48,11 +51,10 @@ Langevin::Langevin() {
 
 Langevin::Langevin(float T, float alpha, float h, Point *p) {
   assert(T > 0);
-  this->T = T;
-  this->alpha = alpha;
-  this->h = h;
+  assert(alpha > 0);
+  assert(h > 0);
 
-  param_change();
+  param_change(T, alpha, h);
 
   this->time = 0.;
 
@@ -72,11 +74,14 @@ Langevin::~Langevin() {
 /**
  * Whenever alpha, the timestep h, or T change, this must be run
  */
-void Langevin::param_change() {
-  this->A = 4.0 / (2.0 + this->alpha * this->h);
-  this->B = -1.0 * (2.0 - this->alpha * this->h) / (2.0 + this->alpha * this->h);
-  this->C = 2.0 * this->h * this->h / (2.0 + this->alpha * this->h);
-  this->D = sqrt(2 * this->alpha * KBOLTZMANN * this->T) / (2.0 + this->alpha * this->h);
+void Langevin::param_change(float T, float alpha, float h) {
+  this->T = T;
+  this->alpha = alpha;
+  this->h = h;
+  this->A = 4.0 / (2.0 + alpha * h);
+  this->B = -1.0 * (2.0 - alpha * h) / (2.0 + alpha * h);
+  this->C = 2.0 * h * h / (2.0 + alpha * h);
+  this->D = sqrt(2 * alpha * KBOLTZMANN * T * h * h * h) / (2.0 + alpha * h);
 }
 
 float random_uniform(float a, float b) {
@@ -129,13 +134,25 @@ class LennardJonesSystem {
 public:
   LennardJonesSystem(int nparticles, Point *centers, float m, float rmin,
 		     float epsilon, float T, float alpha, float h,
-		     float rcmult, float box_width);
+		     float rc, float box_width);
   LennardJonesSystem(int nparticles, Point *centers, float m, float rmin,
 		     float epsilon, float T, float alpha, float h,
 		     float box_width);
   ~LennardJonesSystem();
   twofloat acceleration(twofloat from, twofloat on);
+  void param_change(float T, float alpha, float h, float box_width,
+		    float m, float rmin, float rc, float epsilon);
+  void param_change(float T, float alpha, float h);
   void step();
+  float get_box_width() { return this->box_width;}
+  float get_T() { return this->T;}
+  float get_alpha() { return this->alpha;}
+  float get_h() { return this->h;}
+  float get_m() { return this->m;}
+  float get_rmin() { return this->rmin;}
+  float get_rc() { return this->rc;}
+  float get_epsilon() { return this->epsilon;}
+  float get_nparticles() { return this->nparticles;}
 private:
   float box_width;
   float T, alpha, h;
@@ -145,6 +162,13 @@ private:
   Point *centers;
   twofloat *accels;
   Langevin *integrators;
+
+  void construct_lennard_jones(int nparticles, Point *centers, float m,
+			       float rmin, float epsilon, float T, float alpha,
+			       float h, float rc, float box_width);
+  void param_set(float T, float alpha, float h, float box_width,
+		 float m, float rmin, float rc, float epsilon);
+  void update_integrators();
 };
 
 #define DEFAULT_RC_MULT 2.3
@@ -153,42 +177,112 @@ LennardJonesSystem::LennardJonesSystem(int nparticles, Point *centers,
 				       float m, float rmin,
 				       float epsilon, float T, float alpha,
 				       float h, float box_width) {
-  LennardJonesSystem(nparticles, centers, m, rmin, epsilon, T, alpha, h,
-		     DEFAULT_RC_MULT, box_width);
+  construct_lennard_jones(nparticles, centers, m, rmin, epsilon,
+			  T, alpha, h, DEFAULT_RC_MULT * rmin, box_width);
 }
 
 LennardJonesSystem::LennardJonesSystem(int nparticles, Point *centers, float m,
 				       float rmin, float epsilon,
 				       float T, float alpha, float h,
-				       float rcmult, float box_width) {
-  this->box_width = box_width;
+				       float rc, float box_width) {
+  construct_lennard_jones(nparticles, centers, m, rmin, epsilon,
+			  T, alpha, h, rc, box_width);
+}
 
-  this->m = m;
-  this->rmin = rmin;
-  this->rc = rmin * rcmult;
-  this->epsilon = epsilon;
-
-  this->T = T;
-  this->alpha = alpha;
-  this->h = h;
+void LennardJonesSystem::construct_lennard_jones(int nparticles,
+						 Point *centers, float m,
+						 float rmin, float epsilon,
+						 float T, float alpha, float h,
+						 float rc, float box_width) {
+  param_set(T, alpha, h, box_width, m, rmin, rc, epsilon);
 
   this->nparticles = nparticles;
+  //cout << this->nparticles << endl;
   this->centers = centers;
   this->accels = new twofloat[nparticles];
   for (int i = 0; i < nparticles; i++) {
     this->accels[i].x = 0;
     this->accels[i].y = 0;
   }
+  //cout << this->nparticles << endl;
   this->integrators = new Langevin[nparticles];
   for (int i = 0; i < nparticles; i++) {
     this->integrators[i] = Langevin(this->T, this->alpha, this->h,
 				    &centers[i]);
   }
+  //cout << this->nparticles << endl;
 }
 
 LennardJonesSystem::~LennardJonesSystem() {
   delete[] this->accels;
   delete[] this->integrators;
+}
+
+void LennardJonesSystem::param_change(float T, float alpha, float h) {
+  this->T = T;
+  this->alpha = alpha;
+  this->h = h;
+
+  // Update all the integrators
+  update_integrators();
+}
+
+
+void LennardJonesSystem::param_change(float T, float alpha, float h,
+				      float box_width, float m, float rmin,
+				      float rc, float epsilon) {
+  param_set(T, alpha, h, box_width, m, rmin, rc, epsilon);
+
+  // Update all the integrators
+  update_integrators();
+}
+
+void LennardJonesSystem::update_integrators() {
+  for (int i = 0; i < this->nparticles; i++) {
+    this->integrators[i].param_change(this->T, this->alpha, this->h);
+  }
+}
+
+void LennardJonesSystem::param_set(float T, float alpha, float h,
+				   float box_width, float m, float rmin,
+				   float rc, float epsilon) {
+  this->box_width = box_width;
+
+  this->m = m;
+  this->rmin = rmin;
+  this->rc = rc;
+  this->epsilon = epsilon;
+
+  this->T = T;
+  this->alpha = alpha;
+  this->h = h;
+}
+
+void LennardJonesSystem::step() {
+  cout << this->nparticles << endl;
+  // Set all accelerations to zero
+  for (int i = 0; i < this->nparticles; i++) {
+    this->accels[i].x = 0.;
+    this->accels[i].y = 0.;
+  }
+
+  // Calculate accelerations for each point
+  for (int i = 0; i < nparticles - 1; i++) {
+    for (int j = i + 1; j < nparticles; j++) {
+      // TODO: check the sign here
+      twofloat ijaccel = acceleration(this->centers[j], this->centers[i]);
+      this->accels[i].x += ijaccel.x;
+      this->accels[i].y += ijaccel.y;
+      // Opposite sign for particle j
+      this->accels[j].x -= ijaccel.x;
+      this->accels[j].y -= ijaccel.y;
+    }
+    // Particle i acceleration complete
+    this->integrators[i].update(this->accels[i]);
+  }
+
+  // The last particle has the correct acceleration after the loop
+  this->integrators[nparticles - 1].update(this->accels[nparticles - 1]);
 }
 
 /**
