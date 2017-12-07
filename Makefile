@@ -1,14 +1,16 @@
 SET  = set4
 OPEN = xdg-open
 
-FLAGS = -g -ggdb
+FLAGS   = -g -ggdb
+# uncomment if linker flags are needed
+#LFLAGS
 
 $(SET).pdf: $(SET).tex Makefile
 	pdflatex -shell-escape $(SET).tex
 	pdflatex -shell-escape $(SET).tex
 
 molec: molec.o
-	g++ -o molec molec.o
+	g++ -o molec $(LFLAGS) molec.o
 
 molec.o: molec.cpp molec.hpp
 	g++ -c $(FLAGS) molec.cpp
