@@ -1,7 +1,8 @@
 SET  = set4
 OPEN = xdg-open
 
-FLAGS   = -g -ggdb
+CC = g++
+FLAGS   = -g -ggdb -fPIC
 # uncomment if linker flags are needed
 #LFLAGS
 
@@ -10,10 +11,13 @@ $(SET).pdf: $(SET).tex Makefile
 	pdflatex -shell-escape $(SET).tex
 
 molec: molec.o
-	g++ -o molec $(LFLAGS) molec.o
+	$(CC) -o molec $(LFLAGS) molec.o
 
-molec.o: molec.cpp molec.hpp
-	g++ -c $(FLAGS) molec.cpp
+molec.so: molec.o
+	$(CC) -shared -o $@ $^
+
+molec.o: molec.cpp molec.hpp Makefile
+	$(CC) -c $(FLAGS) molec.cpp
 
 .PHONY: clean view
 view: $(SET).pdf
@@ -21,4 +25,4 @@ view: $(SET).pdf
 
 clean:
 	rm -f $(SET).pdf $(SET).log $(SET).aux
-	rm -f molec molec.o
+	rm -f molec molec.o molec.so

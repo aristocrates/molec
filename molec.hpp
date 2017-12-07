@@ -12,7 +12,7 @@
 using namespace std;
 
 // Constants
-#define KBOLTZMANN (8.6 * 1e-5)
+#define KBOLTZMANN (1.0)
 
 typedef struct {
   float x, y;
@@ -312,6 +312,91 @@ twofloat LennardJonesSystem::acceleration(Point from, Point on) {
   ans.x = magnitude * dx / r;
   ans.y = magnitude * dy / r;
   return ans;
+}
+
+/**
+ * Plain c API for interfacing with python ctypes
+ *
+ * Some relevant references for doing this:
+ * https://stackoverflow.com/questions/1615813/how-to-use-c-classes-with-ctypes/7061012#7061012
+ * http://bigbang.waterlin.org/bang/using-python-ctypes-to-link-cpp-library/
+ */
+extern "C" {
+  LennardJonesSystem *LennardJones_new_full(int nparticles, Point *centers,
+					    float m, float rmin, float epsilon,
+					    float T, float alpha, float h,
+					    float rc, float box_width) {
+    LennardJonesSystem *sys = new LennardJonesSystem(nparticles, centers, m,
+						     rmin, epsilon, T,
+						     alpha, h, rc, box_width);
+    return sys;
+  }
+
+  LennardJonesSystem *LennardJones_new(int nparticles, Point *centers,
+				       float m, float rmin, float epsilon,
+				       float T, float alpha, float h,
+				       float box_width) {
+    LennardJonesSystem *sys = new LennardJonesSystem(nparticles, centers, m,
+						     rmin, epsilon, T,
+						     alpha, h, box_width);
+    return sys;
+  }
+
+  float LennardJones_get_box_width(LennardJonesSystem *sys) {
+    return sys->get_box_width();
+  }
+
+  float LennardJones_get_T(LennardJonesSystem *sys) {
+    return sys->get_T();
+  }
+
+  float LennardJones_get_alpha(LennardJonesSystem *sys) {
+    return sys->get_alpha();
+  }
+
+  float LennardJones_get_h(LennardJonesSystem *sys) {
+    return sys->get_h();
+  }
+
+  float LennardJones_get_m(LennardJonesSystem *sys) {
+    return sys->get_m();
+  }
+
+  float LennardJones_get_rmin(LennardJonesSystem *sys) {
+    return sys->get_rmin();
+  }
+
+  float LennardJones_get_rc(LennardJonesSystem *sys) {
+    return sys->get_rc();
+  }
+
+  float LennardJones_get_epsilon(LennardJonesSystem *sys) {
+    return sys->get_epsilon();
+  }
+
+  float LennardJones_get_nparticles(LennardJonesSystem *sys) {
+    return sys->get_nparticles();
+  }
+  
+  void LennardJones_param_change_full(LennardJonesSystem *sys, float T,
+				      float alpha, float h, float box_width,
+				      float m, float rmin, float rc,
+				      float epsilon) {
+    sys->param_change(T, alpha, h, box_width, m, rmin, rc, epsilon);
+  }
+
+  void LennardJones_param_change(LennardJonesSystem *sys, float T, float alpha,
+				 float h) {
+    sys->param_change(T, alpha, h);
+  }
+
+  void LennardJones_step(LennardJonesSystem *sys) {
+    sys->step();
+  }
+
+  void LennardJones_delete(LennardJonesSystem *sys) {
+    delete sys;
+  }
 }
 
 #endif
