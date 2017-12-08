@@ -3,7 +3,7 @@
 
 #define TEST_GAUSS 0
 
-Point make_point(float x, float y) {
+Point make_point(double x, double y) {
   Point ans;
   ans.x = x;
   ans.y = y;
@@ -22,16 +22,16 @@ int main() {
 
   box.step();
 
-  twofloat a;
+  twodouble a;
   a.x = 1.;
   a.y = 1.;
-  twofloat b;
+  twodouble b;
   b.x = 3.;
   b.y = 3.;
-  twofloat accel = box.acceleration(a, b);
+  twodouble accel = box.acceleration(a, b);
   cout << "x: " << accel.x << ", y: " << accel.y << endl;
 
-  twofloat c, d;
+  twodouble c, d;
   c.x = 1.;
   c.y = 10.;
   d.x = 29.;
@@ -66,7 +66,7 @@ int main() {
 
   cout << "Two point system sanity test" << endl;
 
-  float centers3[4] = {10., 10., 10., 11.};
+  double centers3[4] = {10., 10., 10., 11.};
   LennardJonesSystem box3(2, centers2, 1.0, 2.0, 0.1, 0., 0.2, 0.001, 30);
   cout << "(" << box3.get_centers()[0].x << "," << box2.get_centers()[0].y << ")";
   cout << "(" << box3.get_centers()[1].x << "," << box2.get_centers()[1].y << ")" << endl;
@@ -87,10 +87,10 @@ int main() {
 
   cout << "[";
   for (int i = 0; i < 1000; i++) {
-    twofloat gaussian_rand = normal_gaussian_rand();
+    twodouble gaussian_rand = normal_gaussian_rand();
     cout << gaussian_rand.x << ", " << gaussian_rand.y << ", ";
   }
-  twofloat gaussian_rand = normal_gaussian_rand();
+  twodouble gaussian_rand = normal_gaussian_rand();
   cout << gaussian_rand.x << ", " << gaussian_rand.y << "]" << endl;
   #endif
   return 0;

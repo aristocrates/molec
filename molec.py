@@ -19,74 +19,74 @@ class LennardJones:
         nparticles = len(centers)
         centers_array = b""
         for p in centers:
-            centers_array += struct.pack("ff", *p)
+            centers_array += struct.pack("dd", *p)
 
         if rc == "default":
             constructor = lib.LennardJones_new
             constructor.argtypes = (ctypes.c_int,     # nparticles
                                     ctypes.c_char_p,  # centers
-                                    ctypes.c_float,   # m
-                                    ctypes.c_float,   # rmin
-                                    ctypes.c_float,   # epsilon
-                                    ctypes.c_float,   # T
-                                    ctypes.c_float,   # alpha
-                                    ctypes.c_float,   # h
-                                    ctypes.c_float)   # box_width
+                                    ctypes.c_double,   # m
+                                    ctypes.c_double,   # rmin
+                                    ctypes.c_double,   # epsilon
+                                    ctypes.c_double,   # T
+                                    ctypes.c_double,   # alpha
+                                    ctypes.c_double,   # h
+                                    ctypes.c_double)   # box_width
             self.obj = constructor(nparticles, centers_array, m, rmin,
                                    epsilon, T, alpha, h, box_width)
         else:
             constructor = lib.LennardJones_new_full
             constructor.argtypes = (ctypes.c_int,     # nparticles
                                     ctypes.c_char_p,  # centers
-                                    ctypes.c_float,   # m
-                                    ctypes.c_float,   # rmin
-                                    ctypes.c_float,   # epsilon
-                                    ctypes.c_float,   # T
-                                    ctypes.c_float,   # alpha
-                                    ctypes.c_float,   # h
-                                    ctypes.c_float,   # rc
-                                    ctypes.c_float)   # box_width
+                                    ctypes.c_double,   # m
+                                    ctypes.c_double,   # rmin
+                                    ctypes.c_double,   # epsilon
+                                    ctypes.c_double,   # T
+                                    ctypes.c_double,   # alpha
+                                    ctypes.c_double,   # h
+                                    ctypes.c_double,   # rc
+                                    ctypes.c_double)   # box_width
             self.obj = constructor(nparticles, centers_array, m, rmin,
                                    epsilon, T, alpha, h, rc, box_width)
 
     def get_box_width(self):
         ans_call = lib.LennardJones_get_box_width
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_T(self):
         ans_call = lib.LennardJones_get_T
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_alpha(self):
         ans_call = lib.LennardJones_get_alpha
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_h(self):
         ans_call = lib.LennardJones_get_h
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_m(self):
         ans_call = lib.LennardJones_get_m
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_rmin(self):
         ans_call = lib.LennardJones_get_rmin
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_rc(self):
         ans_call = lib.LennardJones_get_rc
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_epsilon(self):
         ans_call = lib.LennardJones_get_epsilon
-        ans_call.restype = ctypes.c_float
+        ans_call.restype = ctypes.c_double
         return ans_call(self.obj)
 
     def get_nparticles(self):
@@ -96,7 +96,7 @@ class LennardJones:
 
     def get_centers(self):
         ans_call = lib.LennardJones_get_centers
-        ans_call.restype = ctypes.POINTER(ctypes.c_float)
+        ans_call.restype = ctypes.POINTER(ctypes.c_double)
         return ans_call(self.obj)
 
     def step(self):
@@ -107,10 +107,10 @@ class LennardJones:
         if all(np.array([ m, rmin, rc, epsilon]) == "nochange"):
             param_call = lib.LennardJones_param_change
             param_call.argtypes = (ctypes.c_void_p, # sys
-                                   ctypes.c_float,  # T
-                                   ctypes.c_float,  # alpha
-                                   ctypes.c_float,  # h
-                                   ctypes.c_float)  # box_width
+                                   ctypes.c_double,  # T
+                                   ctypes.c_double,  # alpha
+                                   ctypes.c_double,  # h
+                                   ctypes.c_double)  # box_width
             param_call(self.obj, T, alpha, h, box_width)
         else:
             if m == "nochange":
@@ -123,14 +123,14 @@ class LennardJones:
                 epsilon = self.get_epsilon()
             param_call = lib.LennardJones_param_change_full
             param_call.argtypes = (ctypes.c_void_p, # sys
-                                   ctypes.c_float,  # T
-                                   ctypes.c_float,  # alpha
-                                   ctypes.c_float,  # h
-                                   ctypes.c_float,  # box_width
-                                   ctypes.c_float,  # m
-                                   ctypes.c_float,  # rmin
-                                   ctypes.c_float,  # rc
-                                   ctypes.c_float)  # epsilon
+                                   ctypes.c_double,  # T
+                                   ctypes.c_double,  # alpha
+                                   ctypes.c_double,  # h
+                                   ctypes.c_double,  # box_width
+                                   ctypes.c_double,  # m
+                                   ctypes.c_double,  # rmin
+                                   ctypes.c_double,  # rc
+                                   ctypes.c_double)  # epsilon
             param_call(self.obj, T, alpha, h, box_width, m, rmin, rc, epsilon)
 
     def deconstruct(self):
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     print(centers)
     scatter_particles(centers)
     simulation = LennardJones(centers, m = 1, rmin = 1., epsilon = 0.1,
-                              T = 0., alpha = 0.2, h = 0.001,
+                              T = 1, alpha = 0.2, h = 0.001,
                               rc = "default", box_width = box_width)
     try:
         # print out every parameter as a sanity check
