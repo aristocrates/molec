@@ -11,6 +11,9 @@
 
 using namespace std;
 
+// https://stackoverflow.com/questions/11980292/how-to-wrap-around-a-range
+#define REALMOD(x, y) ( (x) - (y) * floor( (x) / (y) ) )
+
 // Constants
 #define KBOLTZMANN (1.0)
 
@@ -29,16 +32,16 @@ typedef twofloat Point;
 class Langevin {
 public:
   Langevin();
-  Langevin(float T, float alpha, float h, Point *p);
+  Langevin(float T, float alpha, float h, float box_width, Point *p);
   ~Langevin();
-  void param_change(float T, float alpha, float h);
+  void param_change(float T, float alpha, float h, float box_width);
   twofloat update(twofloat acceleration);
 private:
   Point *p;
-  bool first;
+  //bool first;
   twofloat position, oldposition;
   twofloat prevrand;
-  float T, alpha, h, time;
+  float T, alpha, h, box_width, time;
   float A, B, C, D;
 };
 
@@ -49,18 +52,18 @@ Langevin::Langevin() {
   // do nothing at all
 }
 
-Langevin::Langevin(float T, float alpha, float h, Point *p) {
+Langevin::Langevin(float T, float alpha, float h, float box_width, Point *p) {
   assert(T > 0);
   assert(alpha > 0);
   assert(h > 0);
 
-  param_change(T, alpha, h);
+  param_change(T, alpha, h, box_width);
 
   this->time = 0.;
 
   this->prevrand.x = 0;
   this->prevrand.y = 0;
-  this->first = true;
+  //this->first = true;
   this->p = p;
   this->oldposition.x = p->x;
   this->oldposition.y = p->y;
@@ -74,10 +77,12 @@ Langevin::~Langevin() {
 /**
  * Whenever alpha, the timestep h, or T change, this must be run
  */
-void Langevin::param_change(float T, float alpha, float h) {
+void Langevin::param_change(float T, float alpha, float h, float box_width) {
   this->T = T;
   this->alpha = alpha;
   this->h = h;
+  this->box_width = box_width;
+
   this->A = 4.0 / (2.0 + alpha * h);
   this->B = -1.0 * (2.0 - alpha * h) / (2.0 + alpha * h);
   this->C = 2.0 * h * h / (2.0 + alpha * h);
@@ -120,6 +125,10 @@ twofloat Langevin::update(twofloat acceleration) {
 		+ this->C * acceleration.y
 		+ this->D * (current_rand.y + this->prevrand.y) );
 
+  // If newx or newy need to wrap around, then correct for that
+  newx = REALMOD(newx, this->box_width);
+  newy = REALMOD(newy, this->box_width);
+
   this->oldposition.x = this->p->x;
   this->oldposition.y = this->p->y;
 
@@ -138,11 +147,18 @@ public:
   LennardJonesSystem(int nparticles, Point *centers, float m, float rmin,
 		     float epsilon, float T, float alpha, float h,
 		     float box_width);
+  LennardJonesSystem(int nparticles, float *centers, float m,
+		     float rmin, float epsilon, float T,
+		     float alpha, float h, float rc,
+		     float box_width);
+  LennardJonesSystem(int nparticles, float *centers, float m,
+		     float rmin, float epsilon, float T,
+		     float alpha, float h, float box_width);
   ~LennardJonesSystem();
   twofloat acceleration(twofloat from, twofloat on);
   void param_change(float T, float alpha, float h, float box_width,
 		    float m, float rmin, float rc, float epsilon);
-  void param_change(float T, float alpha, float h);
+  void param_change(float T, float alpha, float h, float box_width);
   void step();
   float get_box_width() { return this->box_width;}
   float get_T() { return this->T;}
@@ -157,6 +173,7 @@ private:
   float box_width;
   float T, alpha, h;
   float m, rmin, rc, epsilon;
+  bool delete_centers = false;
 
   int nparticles;
   Point *centers;
@@ -177,6 +194,7 @@ LennardJonesSystem::LennardJonesSystem(int nparticles, Point *centers,
 				       float m, float rmin,
 				       float epsilon, float T, float alpha,
 				       float h, float box_width) {
+  this->delete_centers = false;
   construct_lennard_jones(nparticles, centers, m, rmin, epsilon,
 			  T, alpha, h, DEFAULT_RC_MULT * rmin, box_width);
 }
@@ -185,8 +203,39 @@ LennardJonesSystem::LennardJonesSystem(int nparticles, Point *centers, float m,
 				       float rmin, float epsilon,
 				       float T, float alpha, float h,
 				       float rc, float box_width) {
+  this->delete_centers = false;
   construct_lennard_jones(nparticles, centers, m, rmin, epsilon,
 			  T, alpha, h, rc, box_width);
+}
+
+/**
+ * Constructors accepting an array of floats for centers, makes using ctypes
+ * easier.
+ */
+LennardJonesSystem::LennardJonesSystem(int nparticles, float *centers, float m,
+				       float rmin, float epsilon, float T,
+				       float alpha, float h, float rc,
+				       float box_width) {
+  this->delete_centers = true;
+  Point *local_centers = new Point[nparticles];
+  for (int i = 0; i < nparticles; i++) {
+    local_centers[i].x = centers[2 * i];
+    local_centers[i].y = centers[2 * i + 1];
+  }
+  construct_lennard_jones(nparticles, local_centers, m, rmin, epsilon, T,
+			  alpha, h, rc, box_width);
+}
+LennardJonesSystem::LennardJonesSystem(int nparticles, float *centers, float m,
+				       float rmin, float epsilon, float T,
+				       float alpha, float h, float box_width) {
+  this->delete_centers = true;
+  Point *local_centers = new Point[nparticles];
+  for (int i = 0; i < nparticles; i++) {
+    local_centers[i].x = centers[2 * i];
+    local_centers[i].y = centers[2 * i + 1];
+  }
+  construct_lennard_jones(nparticles, local_centers, m, rmin, epsilon, T,
+			  alpha, h, DEFAULT_RC_MULT * rmin, box_width);
 }
 
 void LennardJonesSystem::construct_lennard_jones(int nparticles,
@@ -208,20 +257,25 @@ void LennardJonesSystem::construct_lennard_jones(int nparticles,
   this->integrators = new Langevin[nparticles];
   for (int i = 0; i < nparticles; i++) {
     this->integrators[i] = Langevin(this->T, this->alpha, this->h,
-				    &centers[i]);
+				    this->box_width, &centers[i]);
   }
   //cout << this->nparticles << endl;
 }
 
 LennardJonesSystem::~LennardJonesSystem() {
+  if (delete_centers) {
+    delete[] this->centers;
+  }
   delete[] this->accels;
   delete[] this->integrators;
 }
 
-void LennardJonesSystem::param_change(float T, float alpha, float h) {
+void LennardJonesSystem::param_change(float T, float alpha, float h,
+				      float box_width) {
   this->T = T;
   this->alpha = alpha;
   this->h = h;
+  this->box_width = box_width;
 
   // Update all the integrators
   update_integrators();
@@ -239,7 +293,8 @@ void LennardJonesSystem::param_change(float T, float alpha, float h,
 
 void LennardJonesSystem::update_integrators() {
   for (int i = 0; i < this->nparticles; i++) {
-    this->integrators[i].param_change(this->T, this->alpha, this->h);
+    this->integrators[i].param_change(this->T, this->alpha, this->h,
+				      this->box_width);
   }
 }
 
@@ -322,7 +377,7 @@ twofloat LennardJonesSystem::acceleration(Point from, Point on) {
  * http://bigbang.waterlin.org/bang/using-python-ctypes-to-link-cpp-library/
  */
 extern "C" {
-  LennardJonesSystem *LennardJones_new_full(int nparticles, Point *centers,
+  LennardJonesSystem *LennardJones_new_full(int nparticles, float *centers,
 					    float m, float rmin, float epsilon,
 					    float T, float alpha, float h,
 					    float rc, float box_width) {
@@ -332,7 +387,7 @@ extern "C" {
     return sys;
   }
 
-  LennardJonesSystem *LennardJones_new(int nparticles, Point *centers,
+  LennardJonesSystem *LennardJones_new(int nparticles, float *centers,
 				       float m, float rmin, float epsilon,
 				       float T, float alpha, float h,
 				       float box_width) {
@@ -386,8 +441,8 @@ extern "C" {
   }
 
   void LennardJones_param_change(LennardJonesSystem *sys, float T, float alpha,
-				 float h) {
-    sys->param_change(T, alpha, h);
+				 float h, float box_width) {
+    sys->param_change(T, alpha, h, box_width);
   }
 
   void LennardJones_step(LennardJonesSystem *sys) {
