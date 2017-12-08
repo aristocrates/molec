@@ -1,5 +1,5 @@
 /**
- * 
+ * Molecular dynamics simulator
  */
 #ifndef LANGEVIN_H
 #define LANGEVIN_H
@@ -35,7 +35,7 @@ public:
   Langevin(float T, float alpha, float h, float box_width, Point *p);
   ~Langevin();
   void param_change(float T, float alpha, float h, float box_width);
-  twofloat update(twofloat acceleration);
+  void update(twofloat acceleration);
 private:
   Point *p;
   //bool first;
@@ -53,7 +53,7 @@ Langevin::Langevin() {
 }
 
 Langevin::Langevin(float T, float alpha, float h, float box_width, Point *p) {
-  assert(T > 0);
+  assert(T >= 0);
   assert(alpha > 0);
   assert(h > 0);
 
@@ -113,9 +113,7 @@ twofloat normal_gaussian_rand() {
 /**
  * Updates the point given acceleration
  */
-twofloat Langevin::update(twofloat acceleration) {
-  twofloat ans;
-
+void Langevin::update(twofloat acceleration) {
   twofloat current_rand = normal_gaussian_rand();
 
   float newx = (this->A * this->p->x + this->B * this->oldposition.x
@@ -135,8 +133,7 @@ twofloat Langevin::update(twofloat acceleration) {
   this->p->x = newx;
   this->p->y = newy;
 
-  prevrand = current_rand;
-  return ans;
+  this->prevrand = current_rand;
 }
 
 class LennardJonesSystem {
@@ -169,6 +166,7 @@ public:
   float get_rc() { return this->rc;}
   float get_epsilon() { return this->epsilon;}
   float get_nparticles() { return this->nparticles;}
+  twofloat *get_centers() { return this->centers;}
 private:
   float box_width;
   float T, alpha, h;
@@ -333,11 +331,14 @@ void LennardJonesSystem::step() {
       this->accels[j].y -= ijaccel.y;
     }
     // Particle i acceleration complete
-    this->integrators[i].update(this->accels[i]);
   }
 
+  // Now update everything
   // The last particle has the correct acceleration after the loop
-  this->integrators[nparticles - 1].update(this->accels[nparticles - 1]);
+  for (int i = 0; i < nparticles; i++) {
+    this->integrators[i].update(this->accels[i]);
+  }
+  //this->integrators[nparticles - 1].update(this->accels[nparticles - 1]);
 }
 
 /**
@@ -352,8 +353,14 @@ twofloat LennardJonesSystem::acceleration(Point from, Point on) {
   if (dx > this->box_width / 2) {
     dx -= this->box_width;
   }
+  if (-1 * dx > this->box_width / 2) {
+    dx += this->box_width;
+  }
   if (dy > this->box_width / 2) {
     dy -= this->box_width;
+  }
+  if (-1 * dy > this->box_width / 2) {
+    dy += this->box_width;
   }
   float r = sqrt(dx * dx + dy * dy);
   twofloat ans;
@@ -431,6 +438,10 @@ extern "C" {
 
   float LennardJones_get_nparticles(LennardJonesSystem *sys) {
     return sys->get_nparticles();
+  }
+
+  twofloat *LennardJones_get_centers(LennardJonesSystem *sys) {
+    return sys->get_centers();
   }
   
   void LennardJones_param_change_full(LennardJonesSystem *sys, float T,

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import ctypes
 import struct
 import random
+import time
 
 lib = ctypes.cdll.LoadLibrary("./molec.so")
 
@@ -93,6 +94,11 @@ class LennardJones:
         ans_call.restype = ctypes.c_int
         return ans_call(self.obj)
 
+    def get_centers(self):
+        ans_call = lib.LennardJones_get_centers
+        ans_call.restype = ctypes.POINTER(ctypes.c_float)
+        return ans_call(self.obj)
+
     def step(self):
         return lib.LennardJones_step(self.obj)
 
@@ -151,7 +157,7 @@ def not_too_close_random(box_width, centers_so_far, threshold = 1,
     try_again = True
     iteration = 0
     while try_again and iteration < max_tries:
-        ans = (random.uniform(0, 1) * box_width, random.uniform(0, 1) * 30)
+        ans = (random.uniform(0, 1) * box_width, random.uniform(0, 1) * box_width)
         try_again = False
         for c in centers_so_far:
             if dist(ans, c) < threshold:
@@ -162,16 +168,59 @@ def not_too_close_random(box_width, centers_so_far, threshold = 1,
             print("iteration: %s" % str(iteration))
     return ans
 
+def list_to_centers_tuple(centers_list, plot = False):
+    """
+    Assumes centers_list is a numpy array
+    """
+    assert(len(centers_list) % 2 == 0)
+    if not plot:
+        return np.reshape(centers_list, (int(len(centers_list) / 2), 2))
+    else:
+        return np.transpose(np.reshape(centers_list, (int(len(centers_list) / 2), 2)))
+
 if __name__ == "__main__":
     box_width = 30.
     n = 50
+    #n = 2
+    #centers = [(10, 10), (10, 11)]
     centers = []
     for i in range(n):
         centers.append(not_too_close_random(box_width, centers))
     print(centers)
     scatter_particles(centers)
-    simulation = LennardJones(centers, m = 1, rmin = 1, epsilon = 1,
-                              T = 100, alpha = 0.2, h = 0.001,
-                              rc = "default", box_width = 30.)
-    print(simulation.get_nparticles())
-    simulation.deconstruct()
+    simulation = LennardJones(centers, m = 1, rmin = 2., epsilon = 0.1,
+                              T = 0.05, alpha = 0.2, h = 0.001,
+                              rc = "default", box_width = box_width)
+    try:
+        # print out every parameter as a sanity check
+        print("nparticles: " + str(simulation.get_nparticles()))
+        print("mass: " + str(simulation.get_m()))
+        print("rmin: " + str(simulation.get_rmin()))
+        print("epsilon: " + str(simulation.get_epsilon()))
+        print("T: " + str(simulation.get_T()))
+        print("alpha: " + str(simulation.get_alpha()))
+        print("h: " + str(simulation.get_h()))
+        print("rc: " + str(simulation.get_rc()))
+        print("box_width: " + str(simulation.get_box_width()))
+        gotten_centers = simulation.get_centers()
+        gotten_centers = np.ctypeslib.as_array(gotten_centers, (2 * n,))
+        print(gotten_centers)
+        simulation.step()
+        gotten_centers2 = np.ctypeslib.as_array(simulation.get_centers(),
+                                                (2 * n,))
+        print(list_to_centers_tuple(gotten_centers2))
+        plt.axis([0, 30, 0, 30])
+        plt.ion()
+        for i in range(1000):
+            for j in range(10):
+                simulation.step()
+            current_centers = list_to_centers_tuple(np.ctypeslib.as_array(simulation.get_centers(), (2 * n,)), plot = True)
+            #print(current_centers)
+            plt.clf()
+            plt.axis([0, 30, 0, 30])
+            plt.scatter(*current_centers)
+            plt.pause(0.001)
+        while True:
+            plt.pause(0.1)
+    finally:
+        simulation.deconstruct()

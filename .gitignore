@@ -2,3 +2,4 @@
 molec
 *.o
 *.so
+__pycache__/
