@@ -111,7 +111,7 @@ class LennardJones:
                                    ctypes.c_float,  # alpha
                                    ctypes.c_float,  # h
                                    ctypes.c_float)  # box_width
-            param_call(self.obj, T, alpha, h)
+            param_call(self.obj, T, alpha, h, box_width)
         else:
             if m == "nochange":
                 m = self.get_m()
@@ -151,13 +151,13 @@ def dist(p1, p2):
     assert(len(p1) == len(p2) == 2)
     return ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**0.5
         
-def not_too_close_random(box_width, centers_so_far, threshold = 1,
+def not_too_close_random(init_min, width, centers_so_far, threshold = 1,
                          max_tries = 100, verbose = True):
     ans = (0, 0)
     try_again = True
     iteration = 0
     while try_again and iteration < max_tries:
-        ans = (random.uniform(0, 1) * box_width, random.uniform(0, 1) * box_width)
+        ans = (init_min + random.uniform(0, 1) * width, init_min + random.uniform(0, 1) * width)
         try_again = False
         for c in centers_so_far:
             if dist(ans, c) < threshold:
@@ -180,16 +180,19 @@ def list_to_centers_tuple(centers_list, plot = False):
 
 if __name__ == "__main__":
     box_width = 30.
+    init_min = 10.
+    init_width = 10.
+    centers = [(10, 10)]
     n = 50
     #n = 2
     #centers = [(10, 10), (10, 11)]
     centers = []
     for i in range(n):
-        centers.append(not_too_close_random(box_width, centers))
+        centers.append(not_too_close_random(init_min, init_width, centers))
     print(centers)
     scatter_particles(centers)
-    simulation = LennardJones(centers, m = 1, rmin = 2., epsilon = 0.1,
-                              T = 0.05, alpha = 0.2, h = 0.001,
+    simulation = LennardJones(centers, m = 1, rmin = 1., epsilon = 0.1,
+                              T = 0., alpha = 0.2, h = 0.001,
                               rc = "default", box_width = box_width)
     try:
         # print out every parameter as a sanity check
@@ -211,7 +214,18 @@ if __name__ == "__main__":
         print(list_to_centers_tuple(gotten_centers2))
         plt.axis([0, 30, 0, 30])
         plt.ion()
+        k = 0
         for i in range(1000):
+            # every 50 cool the temperature down
+            k += 1
+            if k >= 50:
+                T = simulation.get_T()
+                alpha = simulation.get_alpha()
+                h = simulation.get_h()
+                box_width = simulation.get_box_width()
+                simulation.param_change(T * 0.25, alpha, h, box_width)
+                print("New temperature: %s" % str(simulation.get_T()))
+                k = 0
             for j in range(10):
                 simulation.step()
             current_centers = list_to_centers_tuple(np.ctypeslib.as_array(simulation.get_centers(), (2 * n,)), plot = True)

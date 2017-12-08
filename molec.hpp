@@ -124,14 +124,25 @@ void Langevin::update(twofloat acceleration) {
 		+ this->D * (current_rand.y + this->prevrand.y) );
 
   // If newx or newy need to wrap around, then correct for that
-  newx = REALMOD(newx, this->box_width);
-  newy = REALMOD(newy, this->box_width);
+  float newx_mod = REALMOD(newx, this->box_width);
+  float newy_mod = REALMOD(newy, this->box_width);
+  // Also need to correct the previous location
+  // Failing to do this will give the particle a sudden "kick" acceleration
+  float jumpx = newx_mod - newx;
+  float jumpy = newy_mod - newy;
+  // manually set the jumps to zero if they are just noise
+  if (abs(jumpx) < this->box_width / 2) {
+    jumpx = 0;
+  }
+  if (abs(jumpy) < this->box_width / 2) {
+    jumpy = 0;
+  }
 
-  this->oldposition.x = this->p->x;
-  this->oldposition.y = this->p->y;
+  this->oldposition.x = this->p->x + jumpx;
+  this->oldposition.y = this->p->y + jumpy;
 
-  this->p->x = newx;
-  this->p->y = newy;
+  this->p->x = newx_mod;
+  this->p->y = newy_mod;
 
   this->prevrand = current_rand;
 }
@@ -312,7 +323,7 @@ void LennardJonesSystem::param_set(float T, float alpha, float h,
 }
 
 void LennardJonesSystem::step() {
-  cout << this->nparticles << endl;
+  // cout << this->nparticles << endl;
   // Set all accelerations to zero
   for (int i = 0; i < this->nparticles; i++) {
     this->accels[i].x = 0.;
