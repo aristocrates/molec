@@ -16,12 +16,53 @@
 \newcommand{\highlight}[2]{\colorbox{#2}{$\displaystyle #1$}}
 \renewcommand{\thesubsection}{(\alph{subsection})}
 
+\usepackage{minted}
+
 \begin{document}
-\title{Ph 121a Assignment [n]}
+\title{Ph 121a Assignment 4: Molecular Dynamics}
 \author{Nicholas Meyer}
 
 \maketitle
 
-\section{}
+\section{Approach}
+
+Here, a neutral noble gas was modeled using the Lennard-Jones potential
+
+\begin{align}
+  U_{LJ}(r) = \epsilon \left[\left(\frac{r_{\text{min}}}{r}\right)^{12}
+  - 2\left(\frac{r_{\text{min}}}{r}\right)^6\right]
+\end{align}
+
+\section{Implementation}
+
+The routines for calculating the forces between particles and updating the
+positions through the Langevin-Verlet integrator are in C++.
+Control of the running simulations and plotting are done in python, using
+\mintinline{python}/ctypes/ to interface with the C++ code.
+
+\subsection{Use of double precision instead of single floats}
+
+When single precision floating point numbers were used for particle positions
+and simulation parameters, particles would accelerate toward the bottom left
+corner of the screen. The drift was most noticeable for temperatures close to
+zero. This was likely due to the accumulation of rounding error (which was
+for some reason consistently biased toward rounding down) over many
+iterations.
+
+This behavior was fixed by switching to double precision floats.
+
+\section*{Appendix}
+
+\subsection*{Source Code}
+
+\subsubsection*{molec.hpp}
+
+\inputminted{c++}{molec.hpp}
+
+\newpage
+
+\subsubsection*{molec.py}
+
+\inputminted{python}{molec.py}
 
 \end{document}

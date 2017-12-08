@@ -168,6 +168,40 @@ def not_too_close_random(init_min, width, centers_so_far, threshold = 1,
             print("iteration: %s" % str(iteration))
     return ans
 
+def get_initial_data(nelements, box_width, init_min, init_width, iterations,
+                     steps_per_update = 10, start_temp = 0.01, cool_iter = 50,
+                     decay_factor = 0.25, verbose = False):
+    """
+    Cools a system down into a lattice
+    """
+    centers = []
+    for i in range(nelements):
+        centers.append(not_too_close_random(init_min, init_width, centers))
+    simulation = LennardJones(centers, m = 1, rmin = 1., epsilon = 0.8,
+                              T = start_temp, alpha = 0.2, h = 0.001,
+                              rc = "default", box_width = box_width)
+    try:
+        k = 0
+        for i in range(iterations):
+            # every 50 cool the temperature down
+            k += 1
+            if k >= cool_iter:
+                T = simulation.get_T()
+                alpha = simulation.get_alpha()
+                h = simulation.get_h()
+                box_width = simulation.get_box_width()
+                simulation.param_change(T * decay_factor, alpha, h, box_width)
+                if verbose:
+                    print("New temperature: %s" % str(simulation.get_T()))
+                k = 0
+            for j in range(steps_per_update):
+                simulation.step()
+            current_centers = list_to_centers_tuple(np.ctypeslib.as_array(simulation.get_centers(), (2 * n,)), plot = False)
+    finally:
+        simulation.deconstruct()
+
+    return current_centers
+
 def list_to_centers_tuple(centers_list, plot = False):
     """
     Assumes centers_list is a numpy array
@@ -180,10 +214,10 @@ def list_to_centers_tuple(centers_list, plot = False):
 
 if __name__ == "__main__":
     box_width = 30.
-    init_min = 10.
-    init_width = 10.
+    init_min = 8.
+    init_width = 14.
     centers = [(10, 10)]
-    n = 50
+    n = 100
     #n = 2
     #centers = [(10, 10), (10, 11)]
     centers = []
@@ -191,8 +225,8 @@ if __name__ == "__main__":
         centers.append(not_too_close_random(init_min, init_width, centers))
     print(centers)
     scatter_particles(centers)
-    simulation = LennardJones(centers, m = 1, rmin = 1., epsilon = 0.1,
-                              T = 1, alpha = 0.2, h = 0.001,
+    simulation = LennardJones(centers, m = 1, rmin = 1., epsilon = 0.8,
+                              T = 0.01, alpha = 0.2, h = 0.001,
                               rc = "default", box_width = box_width)
     try:
         # print out every parameter as a sanity check
