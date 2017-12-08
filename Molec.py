@@ -99,6 +99,14 @@ class LennardJones:
         ans_call.restype = ctypes.POINTER(ctypes.c_double)
         return ans_call(self.obj)
 
+    def get_center_data(self, plottable = False):
+        """
+        Returns the coordinates of each center point in a usable
+        numpy array format
+        """
+        # gotten_centers = np.ctypeslib.as_array(gotten_centers, (
+        return list_to_centers_tuple(np.ctypeslib.as_array(self.get_centers(), (2 * self.get_nparticles(),)), plot = plottable)
+
     def step(self):
         return lib.LennardJones_step(self.obj)
 
@@ -140,10 +148,14 @@ class LennardJones:
         lib.LennardJones_delete(self.obj)
         self.obj = None
 
-def scatter_particles(centers, show=True):
+def scatter_particles(centers, xlim = None, ylim = None, show=True):
     centers_x = [c[0] for c in centers]
     centers_y = [c[1] for c in centers]
     plt.scatter(centers_x, centers_y)
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
     if show:
         plt.show()
 
@@ -169,16 +181,21 @@ def not_too_close_random(init_min, width, centers_so_far, threshold = 1,
     return ans
 
 def get_initial_data(nelements, box_width, init_min, init_width, iterations,
-                     steps_per_update = 10, start_temp = 0.01, cool_iter = 50,
+                     steps_per_update = 100, step_size = 1e-4,
+                     start_temp = 0.01, cool_iter = 50,
                      decay_factor = 0.25, verbose = False):
     """
     Cools a system down into a lattice
+
+    By default uses a small step size to obtain sensible initial conditions
+    without blowing up
     """
     centers = []
     for i in range(nelements):
-        centers.append(not_too_close_random(init_min, init_width, centers))
+        centers.append(not_too_close_random(init_min, init_width, centers,
+                                            verbose = False))
     simulation = LennardJones(centers, m = 1, rmin = 1., epsilon = 0.8,
-                              T = start_temp, alpha = 0.2, h = 0.001,
+                              T = start_temp, alpha = 0.2, h = step_size,
                               rc = "default", box_width = box_width)
     try:
         k = 0
@@ -196,11 +213,21 @@ def get_initial_data(nelements, box_width, init_min, init_width, iterations,
                 k = 0
             for j in range(steps_per_update):
                 simulation.step()
-            current_centers = list_to_centers_tuple(np.ctypeslib.as_array(simulation.get_centers(), (2 * n,)), plot = False)
+            current_centers = list_to_centers_tuple(np.ctypeslib.as_array(simulation.get_centers(), (2 * nelements,)), plot = False)
     finally:
         simulation.deconstruct()
 
-    return current_centers
+    return_centers = []
+    for cent in current_centers:
+        if 1 < cent[0] < box_width and 1 < cent[1] < box_width:
+            print(cent)
+            print(cent[0])
+            print(cent[1])
+            # for some unknown reason, appending the numpy array itself
+            # causes the values to become garbage, possibly because something
+            # is overwriting something else
+            return_centers.append([cent[0], cent[1]])
+    return return_centers
 
 def list_to_centers_tuple(centers_list, plot = False):
     """

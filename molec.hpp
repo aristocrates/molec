@@ -176,7 +176,7 @@ public:
   double get_rmin() { return this->rmin;}
   double get_rc() { return this->rc;}
   double get_epsilon() { return this->epsilon;}
-  double get_nparticles() { return this->nparticles;}
+  int get_nparticles() { return this->nparticles;}
   twodouble *get_centers() { return this->centers;}
 private:
   double box_width;
