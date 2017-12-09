@@ -51,6 +51,55 @@ iterations.
 
 This behavior was fixed by switching to double precision floats.
 
+\section{Running the suite}
+
+First, it is necessary to build the dynamic library by running
+
+\begin{minted}{bash}
+make molec.so
+\end{minted}
+
+Then, the visualizer can be run from the command line, i.e.
+
+\begin{minted}{bash}
+python visualizer.py 1.0 movie 1000
+\end{minted}
+
+to make a movie with 1000 frames of the system starting at a solid and
+evolving when the temperature is suddenly set to one, or
+
+\begin{minted}{bash}
+python visualizer.py 5.0
+\end{minted}
+
+to view the animation for $T = 5$.
+
+\section{Plots}
+
+\subsection{Solid}
+
+To view as an animation, run
+
+\begin{minted}{bash}
+python 
+\end{minted}
+
+\subsection{Liquid}
+
+To view as an animation, run
+
+\begin{minted}{bash}
+python
+\end{minted}
+
+\subsection{Gas}
+
+To view as an animation, run
+
+\begin{minted}{bash}
+python 
+\end{minted}
+
 \section*{Appendix}
 
 \subsection*{Source Code}
@@ -61,8 +110,12 @@ This behavior was fixed by switching to double precision floats.
 
 \newpage
 
-\subsubsection*{molec.py}
+\subsubsection*{Molec.py}
 
-\inputminted{python}{molec.py}
+\inputminted{python}{Molec.py}
+
+\newpage
+
+\subsubsection*{visualize.py}
 
 \end{document}

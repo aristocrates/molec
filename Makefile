@@ -6,7 +6,7 @@ FLAGS   = -g -ggdb -fPIC
 # uncomment if linker flags are needed
 #LFLAGS
 
-$(SET).pdf: $(SET).tex Makefile
+$(SET).pdf: $(SET).tex Makefile molec.hpp Molec.py visualize.py
 	pdflatex -shell-escape $(SET).tex
 	pdflatex -shell-escape $(SET).tex
 

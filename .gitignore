@@ -2,4 +2,8 @@
 molec
 *.o
 *.so
+*.aux
+*.log
+*.pdf
 __pycache__/
+_minted*/
