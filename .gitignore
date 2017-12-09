@@ -7,3 +7,5 @@ molec
 *.pdf
 __pycache__/
 _minted*/
+temp*/
+!writeup_plots/*.pdf

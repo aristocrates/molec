@@ -8,6 +8,8 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import Molec
+import numpy as np
+import os
 
 class MolecularViewer:
     """
@@ -68,12 +70,28 @@ def zero_pad(n, length):
     ans = "0"*(length - len(ans)) + ans
     return ans
         
-def write_plot():
-        
-def molecule_gif(lennard_jones_simulation, image_dir, nframes = 1000):
+def write_plot(x, y, n, digits, fileformat, directory, xlim, ylim):
+    plt.scatter(x, y)
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+    plt.savefig(os.path.join(directory, "figure" + zero_pad(n, digits)
+                             + "." + fileformat))
+    plt.close()
+
+def molecule_gif(lennard_jones_simulation, image_dir, nframes = 1000,
+                 steps_per_frame = 10, verbose = True, fileformat = "png"):
+    assert(nframes >= 0)
+    assert(int(nframes) == nframes)
+    digits_needed = 1 + int(np.floor(np.log10(nframes)))
+    max_range = lennard_jones_simulation.get_box_width()
     for i in range(nframes):
-        lennard_jones_simulation.step()
-    
+        if verbose:
+            print(i)
+        for j in range(steps_per_frame):
+            lennard_jones_simulation.step()
+        data = lennard_jones_simulation.get_center_data(plottable = True)
+        write_plot(*data, i, digits_needed, fileformat, image_dir,
+                   [0, max_range], [0, max_range])
 
 if __name__ == "__main__":
     T = 0
@@ -181,10 +199,17 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         T = float(sys.argv[1])
     movie = False
+    fileformat = "png"
     if len(sys.argv) > 2:
         if sys.argv[2] == "movie":
             print("Making movie instead of displaying to screen")
             movie = True
+            image_dir = sys.argv[3]
+            nframes = int(sys.argv[4])
+        elif sys.argv[2] == "pdf":
+            print("Making pdf frames instead of displaying to screen")
+            movie = True
+            fileformat = "pdf"
             image_dir = sys.argv[3]
             nframes = int(sys.argv[4])
     if len(sys.argv) > 5:
@@ -198,7 +223,7 @@ if __name__ == "__main__":
     #import pdb; pdb.set_trace()
     try:
         if movie:
-            molecule_gif(sim, image_dir, nframes)
+            molecule_gif(sim, image_dir, nframes, fileformat = fileformat)
         else:
             viewer = MolecularViewer(sim)
             viewer.show()

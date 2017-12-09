@@ -19,7 +19,12 @@ molec.so: molec.o
 molec.o: molec.cpp molec.hpp Makefile
 	$(CC) -c $(FLAGS) molec.cpp
 
-.PHONY: clean view
+animated_gif/%.gif:
+	sh mkgif.sh $(subst animated_gif/,,$(subst .gif,,$@))
+
+.PHONY: clean view gifs
+gifs: animated_gif/temp0.gif animated_gif/temp1.gif animated_gif/temp10.gif animated_gif/temp100.gif
+
 view: $(SET).pdf
 	$(OPEN) $(SET).pdf
 
